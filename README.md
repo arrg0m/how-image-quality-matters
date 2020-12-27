@@ -1,7 +1,7 @@
-# How image quality matters?
+# How image quality affects model inference output?
 
 
-## How to (mac)
+## How to - mac
 
 Make sure you have `anaconda` installed in your Mac environment. [How?](https://docs.conda.io/projects/conda/en/latest/user-guide/install/macos.html)
 
@@ -26,6 +26,7 @@ python main.py --image_path sample.png --qualities 100 90 80 70
 - Set of sample images
 - Linux & GPU support
 - Torchserve Support
+- Use custom models
 
 - Arguments
   - Logit vs prob
@@ -35,3 +36,6 @@ python main.py --image_path sample.png --qualities 100 90 80 70
 - Long-term
   - Train with distorted images and then evaluate
   - Fine tune with distorted images and then evaluate
+
+## References
+- https://github.com/anishathalye/imagenet-simple-labels/blob/master/imagenet-simple-labels.json
