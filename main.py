@@ -29,9 +29,8 @@ class Runner:
                 transforms.CenterCrop(224),
                 transforms.ToTensor(),
                 transforms.Normalize(
-                    mean=[0.485, 0.456, 0.406],
-                    std=[0.229, 0.224, 0.225],
-                )
+                    mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225],
+                ),
             ]
         )
         self.tmp_dir = Path(TMP_DIR_PATH)
@@ -46,9 +45,7 @@ class Runner:
         image = Image.open(image_path)
         image_rgb = image.convert("RGB")
         image_rgb.save(
-            distorted_filepath,
-            quality=quality,
-            subsampling=0,
+            distorted_filepath, quality=quality, subsampling=0,
         )
         image_distorted = Image.open(distorted_filepath)
         return image_distorted
@@ -68,12 +65,13 @@ class Runner:
             output = model_output_np
 
         label_merged = {
-            label: value for label, value in zip(
-                self.imagenet_simple_labels, output,
-            )
+            label: value
+            for label, value in zip(self.imagenet_simple_labels, output)
         }
         top_k_labels = dict(
-            sorted(label_merged.items(), key=lambda x: x[1], reverse=True)[:TOP_K]
+            sorted(label_merged.items(), key=lambda x: x[1], reverse=True)[
+                :TOP_K
+            ]
         )
         print(f"{image_path} / {quality} / {top_k_labels}")
 
@@ -89,7 +87,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--qualities",
         type=int,
-        nargs='+',
+        nargs="+",
         help="List of quality rates to be applied to given image (0 ~ 100)",
     )
     parser.add_argument(
@@ -99,9 +97,7 @@ if __name__ == "__main__":
         help="Whether or not to apply softmax over model output",
     )
     parser.add_argument(
-        "--no-softmax",
-        dest="use_softmax",
-        action="store_false",
+        "--no-softmax", dest="use_softmax", action="store_false",
     )
     parser.set_defaults(use_softmax=False)
     args = parser.parse_args()
@@ -110,4 +106,3 @@ if __name__ == "__main__":
     runner = Runner(pretrained=True)
     for quality in args.qualities:
         runner.inference(args.image_path, quality, args.use_softmax)
-
