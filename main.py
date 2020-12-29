@@ -1,12 +1,15 @@
 import argparse
+import itertools
 import json
 import shutil
 from pathlib import Path
-from pprint import pprint
+from typing import List, Tuple
 
 import numpy as np
+import torch
 from PIL import Image
 from torch.autograd import Variable
+from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms, models
 
 
@@ -18,6 +21,46 @@ TOP_K = 5
 def softmax(x: np.array) -> np.array:
     x -= np.max(x)
     return np.exp(x) / sum(np.exp(x))
+
+
+class DegradedImageDataset(Dataset):
+    def __init__(self, image_path_list: List[Path], quality_list: List[int]):
+        self.tmp_dir = Path(TMP_DIR_PATH)
+        self.tmp_dir.mkdir(exist_ok=True)
+        self.items = self.load_items(image_path_list, quality_list)
+        self.length = len(image_path_list) * len(quality_list)
+
+    def __len__(self):
+        return self.length
+
+    def load_item(self, image_path: Path, quality_percentage: float) -> Image:
+        image_filename = image_path.stem
+        distorted_filepath = (
+            self.tmp_dir / f"{image_filename}_{quality_percentage}.jpg"
+        )
+
+        image = Image.open(image_path)
+        image_rgb = image.convert("RGB")
+        image_rgb.save(
+            distorted_filepath, quality=quality_percentage, subsampling=0,
+        )
+        image_distorted = Image.open(distorted_filepath)
+        return image_distorted
+
+    def load_items(
+        self, image_path_list: List[Path], quality_list: List[int]
+    ) -> List[Tuple[str, int, "Image"]]:
+        return [
+            (image_path, quality, self.load_item(image_path, quality))
+            for image_path, quality in itertools.product(
+                image_path_list, quality_list
+            )
+        ]
+
+    def __getitem__(self, idx):
+        if torch.is_tensor(idx):
+            idx = idx.tolist()
+        return self.items[idx]
 
 
 class Runner:
@@ -34,29 +77,16 @@ class Runner:
                 ),
             ]
         )
-        self.tmp_dir = Path(TMP_DIR_PATH)
-        self.tmp_dir.mkdir(exist_ok=True)
         with open(IMAGENET_LABEL_PATH, "r") as f:
             self.imagenet_simple_labels = json.load(f)
 
-    def load(self, image_path: Path, quality_percentage: float) -> Image:
-        image_filename = image_path.stem
-        distorted_filepath = (
-            self.tmp_dir / f"{image_filename}_{quality_percentage}.jpg"
-        )
-
-        image = Image.open(image_path)
-        image_rgb = image.convert("RGB")
-        image_rgb.save(
-            distorted_filepath, quality=quality_percentage, subsampling=0,
-        )
-        image_distorted = Image.open(distorted_filepath)
-        return image_distorted
-
     def inference(
-        self, image_path: Path, quality_percentage: int, use_softmax: bool
+        self,
+        image: Image,
+        image_path: Path,
+        quality_percentage: int,
+        use_softmax: bool,
     ):
-        image = self.load(image_path, quality_percentage)
         image = self.transform(image)
         image_batch = image.unsqueeze(0)
 
@@ -78,7 +108,7 @@ class Runner:
                 :TOP_K
             ]
         )
-        pprint(
+        print(
             {
                 "image_path": str(image_path),
                 "quality_percentage": quality_percentage,
@@ -115,5 +145,9 @@ if __name__ == "__main__":
     print(args)
 
     runner = Runner(pretrained=True)
-    for quality_percentage in args.quality_percentages:
-        runner.inference(args.image_path, quality_percentage, args.use_softmax)
+    dataset = DegradedImageDataset([args.image_path], args.quality_percentages)
+    for data in dataset:
+        image_path, quality_percentage, image = data
+        runner.inference(
+            image, image_path, quality_percentage, args.use_softmax
+        )
