@@ -2,6 +2,7 @@ import argparse
 import json
 import shutil
 from pathlib import Path
+from pprint import pprint
 
 import numpy as np
 from PIL import Image
@@ -38,20 +39,24 @@ class Runner:
         with open(IMAGENET_LABEL_PATH, "r") as f:
             self.imagenet_simple_labels = json.load(f)
 
-    def load(self, image_path: Path, quality: float) -> Image:
+    def load(self, image_path: Path, quality_percentage: float) -> Image:
         image_filename = image_path.stem
-        distorted_filepath = self.tmp_dir / f"{image_filename}_{quality}.jpg"
+        distorted_filepath = (
+            self.tmp_dir / f"{image_filename}_{quality_percentage}.jpg"
+        )
 
         image = Image.open(image_path)
         image_rgb = image.convert("RGB")
         image_rgb.save(
-            distorted_filepath, quality=quality, subsampling=0,
+            distorted_filepath, quality=quality_percentage, subsampling=0,
         )
         image_distorted = Image.open(distorted_filepath)
         return image_distorted
 
-    def inference(self, image_path: Path, quality: int, use_softmax: bool):
-        image = self.load(image_path, quality)
+    def inference(
+        self, image_path: Path, quality_percentage: int, use_softmax: bool
+    ):
+        image = self.load(image_path, quality_percentage)
         image = self.transform(image)
         image_batch = image.unsqueeze(0)
 
@@ -73,7 +78,13 @@ class Runner:
                 :TOP_K
             ]
         )
-        print(f"{image_path} / {quality} / {top_k_labels}")
+        pprint(
+            {
+                "image_path": str(image_path),
+                "quality_percentage": quality_percentage,
+                f"top_{TOP_K}_labels": top_k_labels,
+            }
+        )
 
 
 if __name__ == "__main__":
@@ -85,10 +96,10 @@ if __name__ == "__main__":
         help="Local image path to perform inference. png file recommended",
     )
     parser.add_argument(
-        "--qualities",
+        "--quality_percentages",
         type=int,
         nargs="+",
-        help="List of quality rates to be applied to given image (0 ~ 100)",
+        help="List of quality degradation rate to be applied to given image",
     )
     parser.add_argument(
         "--softmax",
@@ -104,5 +115,5 @@ if __name__ == "__main__":
     print(args)
 
     runner = Runner(pretrained=True)
-    for quality in args.qualities:
-        runner.inference(args.image_path, quality, args.use_softmax)
+    for quality_percentage in args.quality_percentages:
+        runner.inference(args.image_path, quality_percentage, args.use_softmax)
