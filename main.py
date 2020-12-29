@@ -3,6 +3,7 @@ import json
 import shutil
 from pathlib import Path
 
+import numpy as np
 from PIL import Image
 from torch.autograd import Variable
 from torchvision import transforms, models
@@ -11,6 +12,11 @@ from torchvision import transforms, models
 TMP_DIR_PATH = "./tmp"
 IMAGENET_LABEL_PATH = "./imagenet_simple_labels.json"
 TOP_K = 5
+
+
+def softmax(x: np.array) -> np.array:
+    x -= np.max(x)
+    return np.exp(x) / sum(np.exp(x))
 
 
 class Runner:
@@ -47,7 +53,7 @@ class Runner:
         image_distorted = Image.open(distorted_filepath)
         return image_distorted
 
-    def inference(self, image_path: Path, quality: int):
+    def inference(self, image_path: Path, quality: int, use_softmax: bool):
         image = self.load(image_path, quality)
         image = self.transform(image)
         image_batch = image.unsqueeze(0)
@@ -56,10 +62,14 @@ class Runner:
         model_output = self.model(model_input)
 
         model_output_np = model_output[0].detach().numpy()
+        if use_softmax:
+            output = softmax(model_output_np)
+        else:
+            output = model_output_np
+
         label_merged = {
-            label: logit for label, logit in zip(
-                self.imagenet_simple_labels,
-                model_output_np,
+            label: value for label, value in zip(
+                self.imagenet_simple_labels, output,
             )
         }
         top_k_labels = dict(
@@ -82,10 +92,22 @@ if __name__ == "__main__":
         nargs='+',
         help="List of quality rates to be applied to given image (0 ~ 100)",
     )
+    parser.add_argument(
+        "--softmax",
+        dest="use_softmax",
+        action="store_true",
+        help="Whether or not to apply softmax over model output",
+    )
+    parser.add_argument(
+        "--no-softmax",
+        dest="use_softmax",
+        action="store_false",
+    )
+    parser.set_defaults(use_softmax=False)
     args = parser.parse_args()
     print(args)
 
     runner = Runner(pretrained=True)
     for quality in args.qualities:
-        runner.inference(args.image_path, quality)
+        runner.inference(args.image_path, quality, args.use_softmax)
 

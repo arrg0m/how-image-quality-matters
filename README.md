@@ -28,9 +28,6 @@ python main.py --image_path sample.png --qualities 100 90 80 70
 - Torchserve Support
 - Use custom models
 
-- Arguments
-  - Logit vs prob
-
 - Seed for non-pretrained model
 
 - Long-term
