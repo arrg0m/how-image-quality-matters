@@ -3,11 +3,16 @@
 
 ## How to - mac
 
-With appropriate virtual envionment,
+With appropriate virtual envionment & assuming appropriate config file exists,
 
 ```bash
 pip install -r requirements.txt
-python main.py --image_path sample.png --qualities 100 90 80 70
+python main.py
+```
+
+Partially overriding some configurations (yes, it uses hydra!)
+```bash
+python main.py config.use_softmax=True
 ```
 
 
@@ -34,6 +39,7 @@ python main.py --image_path sample.png --qualities 100 90 80 70
 
 - Better way to use hydra
   - [use hydra logging](https://hydra.cc/docs/tutorials/basic/running_your_app/logging)
+
 
 ## References
 - https://github.com/anishathalye/imagenet-simple-labels/blob/master/imagenet-simple-labels.json
