@@ -3,4 +3,4 @@ image_path_list:
 quality_percentage_list:
   - 90
   - 80
-softmax: False
+use_softmax: False

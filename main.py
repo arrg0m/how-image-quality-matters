@@ -1,9 +1,7 @@
-import argparse
 import itertools
 import json
-import shutil
 from pathlib import Path
-from typing import List, Tuple
+from typing import List, Tuple, Dict, Any
 
 import hydra
 import torch
@@ -11,16 +9,16 @@ import numpy as np
 from PIL import Image
 from omegaconf import DictConfig, OmegaConf
 from torch.autograd import Variable
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import Dataset
 from torchvision import transforms, models
 
 
 TMP_DIR_PATH = "./tmp"
-IMAGENET_LABEL_PATH = f"./imagenet_simple_labels.json"
+IMAGENET_LABEL_PATH = "./imagenet_simple_labels.json"
 TOP_K = 5
 
 
-def softmax(x: np.array) -> np.array:
+def softmax(x: np.ndarray) -> np.ndarray:
     x -= np.max(x)
     return np.exp(x) / sum(np.exp(x))
 
@@ -35,7 +33,7 @@ class DegradedImageDataset(Dataset):
     def __len__(self):
         return self.length
 
-    def load_item(self, image_path: str, quality_percentage: float) -> Image:
+    def load_item(self, image_path: str, quality_percentage: float) -> "Image":
         image_filename = Path(image_path).stem
         distorted_filepath = (
             self.tmp_dir / f"{image_filename}_{quality_percentage}.jpg"
@@ -59,15 +57,19 @@ class DegradedImageDataset(Dataset):
             )
         ]
 
-    def __getitem__(self, idx):
+    def __getitem__(self, idx: Any) -> Tuple[str, int, "Image"]:
         if torch.is_tensor(idx):
             idx = idx.tolist()
         return self.items[idx]
 
+    def __iter__(self):
+        for item in self.items:
+            yield item
+
 
 class Runner:
     def __init__(
-        self, pretrained: bool = True, label_path: str = IMAGENET_LABEL_PATH
+        self, label_path: str = IMAGENET_LABEL_PATH, pretrained: bool = True
     ):
         self.model = models.mobilenet_v2(pretrained=pretrained)
         self.model.eval()
@@ -86,7 +88,7 @@ class Runner:
 
     def inference(
         self,
-        image: Image,
+        image: "Image",
         image_path: Path,
         quality_percentage: int,
         use_softmax: bool,
@@ -98,19 +100,18 @@ class Runner:
         model_output = self.model(model_input)
 
         model_output_np = model_output[0].detach().numpy()
+        output: np.ndarray
         if use_softmax:
             output = softmax(model_output_np)
         else:
             output = model_output_np
 
-        label_merged = {
+        label_merged: Dict[str, Any] = {
             label: value
             for label, value in zip(self.imagenet_simple_labels, output)
         }
         top_k_labels = dict(
-            sorted(label_merged.items(), key=lambda x: x[1], reverse=True)[
-                :TOP_K
-            ]
+            sorted(label_merged.items(), key=lambda x: -x[1])[:TOP_K]
         )
         print(
             {
@@ -123,19 +124,21 @@ class Runner:
 
 @hydra.main(config_name="config")
 def run(_cfg: DictConfig) -> None:
+    cwd = hydra.utils.get_original_cwd()
     config = OmegaConf.to_container(_cfg)
+    assert isinstance(config, dict)
+
+    image_path_list: List[str] = config["image_path_list"]
+    quality_percentage_list: List[int] = config["quality_percentage_list"]
+    use_softmax: bool = config["use_softmax"]
+
     runner = Runner(
-        pretrained=True,
-        label_path=f"{hydra.utils.get_original_cwd()}/imagenet_simple_labels.json",
+        label_path=f"{cwd}/imagenet_simple_labels.json", pretrained=True,
     )
-    dataset = DegradedImageDataset(
-        config["image_path_list"], config["quality_percentage_list"],
-    )
+    dataset = DegradedImageDataset(image_path_list, quality_percentage_list)
     for data in dataset:
         image_path, quality_percentage, image = data
-        runner.inference(
-            image, image_path, quality_percentage, config["softmax"],
-        )
+        runner.inference(image, image_path, quality_percentage, use_softmax)
 
 
 if __name__ == "__main__":

@@ -27,5 +27,10 @@ python main.py --image_path sample.png --qualities 100 90 80 70
 
 - Seed for non-pretrained model
 
+- CI
+  - `flake8`
+  - `mypy .`
+  - `black . --line-length 80`
+
 ## References
 - https://github.com/anishathalye/imagenet-simple-labels/blob/master/imagenet-simple-labels.json
