@@ -20,10 +20,10 @@ python main.py --image_path sample.png --qualities 100 90 80 70
   - Pre-validation of input arguments
   - Batch Inference
 
-- Set of sample images
+- Set of "free" sample images
 - Linux & GPU support
 - Torchserve Support
-- load and use custom models
+- load and use custom models & labels
 
 - Seed for non-pretrained model
 
@@ -31,6 +31,9 @@ python main.py --image_path sample.png --qualities 100 90 80 70
   - `flake8`
   - `mypy .`
   - `black . --line-length 80`
+
+- Better way to use hydra
+  - [use hydra logging](https://hydra.cc/docs/tutorials/basic/running_your_app/logging)
 
 ## References
 - https://github.com/anishathalye/imagenet-simple-labels/blob/master/imagenet-simple-labels.json

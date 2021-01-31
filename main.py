@@ -1,6 +1,7 @@
 import itertools
 import json
 from pathlib import Path
+from pprint import pprint
 from typing import List, Tuple, Dict, Any
 
 import hydra
@@ -124,28 +125,25 @@ class Runner:
 @hydra.main(config_name="config")
 def run(_cfg: DictConfig) -> None:
     cwd = hydra.utils.get_original_cwd()
-    config = OmegaConf.to_container(_cfg)
-    assert isinstance(config, dict)
 
-    image_path_list: List[str] = config["image_path_list"]
-    quality_percentage_list: List[int] = config["quality_percentage_list"]
-    use_softmax: bool = config["use_softmax"]
-    output_file_jsonl: str = config["output_file_jsonl"]
+    image_path_list: List[str] = _cfg.config.image_path_list
+    quality_percentage_list: List[int] = _cfg.config.quality_percentage_list
+    use_softmax: bool = _cfg.config.use_softmax
+    output_file_jsonl: str = _cfg.config.output_file_jsonl
 
     runner = Runner(
         label_path=f"{cwd}/imagenet_simple_labels.json", pretrained=True,
     )
     dataset = DegradedImageDataset(image_path_list, quality_percentage_list)
 
-    if output_file_jsonl:
-        with jsonlines.open(f"{cwd}/{output_file_jsonl}", mode="w") as writer:
-            for data in dataset:
-                image_path, quality_percentage, image = data
-                result = runner.inference(
-                    image, image_path, quality_percentage, use_softmax
-                )
-                print(result)
-                writer.write(result)
+    with jsonlines.open(f"{cwd}/{output_file_jsonl}", mode="w") as writer:
+        for data in dataset:
+            image_path, quality_percentage, image = data
+            result = runner.inference(
+                image, image_path, quality_percentage, use_softmax
+            )
+            pprint(result)
+            writer.write(result)
 
 
 if __name__ == "__main__":

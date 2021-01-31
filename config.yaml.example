@@ -1,7 +1,8 @@
-image_path_list:
-  - /some/appropriate/absolute/path/image.png
-quality_percentage_list:
-  - 90
-  - 80
-output_file_jsonl: output.jsonl
-use_softmax: False
+config:
+    image_path_list:
+      - /some/appropriate/absolute/path/image.png
+    quality_percentage_list:
+      - 90
+      - 80
+    output_file_jsonl: output.jsonl
+    use_softmax: False
