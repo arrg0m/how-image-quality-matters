@@ -5,3 +5,4 @@ black==19.10b0
 hydra-core==1.0
 flake8==3.8.4
 mypy==0.800
+jsonlines==2.0.0

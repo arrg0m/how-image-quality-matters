@@ -1,0 +1,2 @@
+{"image_path": "/some/appropriate/absolute/path/image.png", "quality_percentage": 90, "top_5_labels": {"quill": 10.949092864990234, "military aircraft": 10.509480476379395, "flagpole": 9.973299026489258, "square academic cap": 9.763283729553223, "projectile": 9.371027946472168}}
+{"image_path": "/some/appropriate/absolute/path/image.png", "quality_percentage": 80, "top_5_labels": {"quill": 11.201089859008789, "military aircraft": 10.972129821777344, "flagpole": 9.935539245605469, "square academic cap": 9.76559829711914, "projectile": 9.581049919128418}}

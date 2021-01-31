@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import List, Tuple, Dict, Any
 
 import hydra
+import jsonlines
 import torch
 import numpy as np
 from PIL import Image
@@ -92,7 +93,7 @@ class Runner:
         image_path: Path,
         quality_percentage: int,
         use_softmax: bool,
-    ):
+    ) -> Dict[str, Any]:
         image = self.transform(image)
         image_batch = image.unsqueeze(0)
 
@@ -106,20 +107,18 @@ class Runner:
         else:
             output = model_output_np
 
-        label_merged: Dict[str, Any] = {
-            label: value
+        label_merged: Dict[str, float] = {
+            label: float(value)
             for label, value in zip(self.imagenet_simple_labels, output)
         }
         top_k_labels = dict(
             sorted(label_merged.items(), key=lambda x: -x[1])[:TOP_K]
         )
-        print(
-            {
-                "image_path": str(image_path),
-                "quality_percentage": quality_percentage,
-                f"top_{TOP_K}_labels": top_k_labels,
-            }
-        )
+        return {
+            "image_path": str(image_path),
+            "quality_percentage": quality_percentage,
+            f"top_{TOP_K}_labels": top_k_labels,
+        }
 
 
 @hydra.main(config_name="config")
@@ -131,14 +130,22 @@ def run(_cfg: DictConfig) -> None:
     image_path_list: List[str] = config["image_path_list"]
     quality_percentage_list: List[int] = config["quality_percentage_list"]
     use_softmax: bool = config["use_softmax"]
+    output_file_jsonl: str = config["output_file_jsonl"]
 
     runner = Runner(
         label_path=f"{cwd}/imagenet_simple_labels.json", pretrained=True,
     )
     dataset = DegradedImageDataset(image_path_list, quality_percentage_list)
-    for data in dataset:
-        image_path, quality_percentage, image = data
-        runner.inference(image, image_path, quality_percentage, use_softmax)
+
+    if output_file_jsonl:
+        with jsonlines.open(f"{cwd}/{output_file_jsonl}", mode="w") as writer:
+            for data in dataset:
+                image_path, quality_percentage, image = data
+                result = runner.inference(
+                    image, image_path, quality_percentage, use_softmax
+                )
+                print(result)
+                writer.write(result)
 
 
 if __name__ == "__main__":

@@ -3,4 +3,5 @@ image_path_list:
 quality_percentage_list:
   - 90
   - 80
+output_file_jsonl: output.jsonl
 use_softmax: False
